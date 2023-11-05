@@ -112,7 +112,7 @@ namespace CarService
     class Car //содержит детали
     {
         private List<Part> _car = new List<Part>();
-        private Part[] _partTypes = new Part[]
+        private Part[] _partTypes = new Part[] // Надо придумать как дать доступ на чтение этого массива другим классам... (возможно метод с выдачей копии массива)
     {
     new Part("wheel"),
     new Part("right headlight"),
@@ -312,4 +312,6 @@ namespace CarService
             Console.SetCursorPosition(0, Console.CursorTop);
         }
     }
+
+
 }
