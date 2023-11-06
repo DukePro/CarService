@@ -1,4 +1,6 @@
-﻿namespace CarService
+﻿using System.IO;
+
+namespace CarService
 {
     class Programm
     {
@@ -6,9 +8,11 @@
         {
             //Menu menu = new Menu();
             //menu.Run();
-            CarFactory factory = new CarFactory();
-            Car car = new Car(factory.CreateCar());
-            car.ShowCar();
+            //CarFactory factory = new CarFactory();
+            //Car car = new Car(factory.CreateCar());
+            //car.ShowCar();
+            Storage _storage = new Storage();
+            _storage.ShowStorage();
         }
     }
 
@@ -66,29 +70,73 @@
     class Service //содержит склад и счёт сервиса и ремонтирует машину клиента.
     {
         private int _serviceMoney;
+        private Storage _storage = new Storage();
+
 
     }
 
     class Storage // содержит контейнеры с деталями
     {
-        private List<Container> _containers = new List<Container>();
+        private int _initialAmmountOfParts = 10;
+        private PartProvider _parts = new PartProvider();
+        private List<Container> _storage = new List<Container>();
 
-        public Storage(List<Container> containers)
+        public Storage()
         {
-            _containers = containers;
+            FillStorage();
         }
 
-        private void AddPartsToExistingContainers(List<Container> containers) //Добавляет детали в контейнеры
+        public void AddPartsToExistingContainers(List<Container> containers) //Добавляет детали в контейнеры
         {
             for (int i = 0; i < containers.Count; i++)
             {
-                for (int j = 0; j < _containers.Count; j++)
+                for (int j = 0; j < _storage.Count; j++)
                 {
-                    if (containers[i].Name == _containers[j].Name)
+                    if (containers[i].Name == _storage[j].Name)
                     {
-                        _containers[i].AddParts(containers[j].TransferAllParts());
+                        _storage[i].AddParts(containers[j].TransferAllPartsFromContainer());
                     }
                 }
+            }
+        }
+
+        public Part TransferPartFromStorage(string name) // Если получен null из этого метода, значит кончились детали, сервис платит штраф.
+        {
+            for (int i = 0; i < _storage.Count; i++)
+            {
+                if (_storage[i].Name == name)
+                {
+                    return _storage[i].TransferPartFromContainer();
+                }
+            }
+
+            Console.WriteLine($"На складе кончились датали - {name}");
+            return null;
+        }
+
+        public void ShowStorage()
+        {
+            Console.WriteLine($"Содержание склада:");
+
+            for (int i = 0; i < _storage.Count; i++)
+            {
+                Console.WriteLine($"Позиция {i + 1} - {_storage[i].Name}, колличество - {_storage[i].Ammount}");
+            }
+        }
+
+        private void FillStorage()
+        {
+            for (int i = 0; i < _parts.ProvideAllPartsType().Length; i++) //проходим столько раз, какой длины список
+            {
+                List<Part> parts = new List<Part>(); //создаём список деталей
+
+                for (int j = 0; j < _initialAmmountOfParts; j++) //добавляем каждую деталь по очереди,столько раз, сколько указано в переменной
+                {
+                    parts.Add(new Part(_parts.ProvideAllPartsType()[i])); //создаём и добавляем новую деталь
+                }
+
+                Container container = new Container(parts); // создаём контейнер и помещаем в него детали
+                _storage.Add(container); // добавляем контейнер на склад
             }
         }
     }
@@ -101,40 +149,16 @@
         public Container(List<Part> parts)
         {
             Id = _id++;
-            
-            if (_parts == null)
-            {
-                _parts = parts;
-            }
-            else
-            {
-                _parts.AddRange(parts);
-            }
-
-            if (_parts != null)
-            {
-                Ammount = _parts.Count;
-            }
-            else
-            {
-                Ammount = 0;
-            }
-
-            if (_parts != null)
-            {
-                Name = _parts[0].Name;
-            }
-            else
-            {
-                Name = "заготовка";
-            }
+            _parts = parts;
+            Ammount = _parts.Count;
+            Name = _parts[0].Name;
         }
 
         public int Id { get; private set; }
         public string Name { get; private set; }
-        private int Ammount { get; set; }
+        public int Ammount { get; private set; }
 
-        public Part TransferPart()
+        public Part TransferPartFromContainer()
         {
             if (_parts.Count > 0)
             {
@@ -149,7 +173,7 @@
             }
         }
 
-        public List<Part> TransferAllParts()
+        public List<Part> TransferAllPartsFromContainer()
         {
             List<Part> parts = _parts;
             _parts.Clear();
@@ -236,11 +260,31 @@
 
             return parts;
         }
+
+        public Part ProvidePart(string name) //Создаём новую деталь по запросу через имя.
+        {
+            Part part = null;
+
+            for (int i = 0; i < _partTypes.Length; i++)
+            {
+                if (_partTypes[i].Name == name)
+                {
+                    part = new Part(_partTypes[i]);
+                }
+            }
+
+            if (part == null)
+            {
+                Console.WriteLine("Нет такой детали.");
+            }
+
+            return part;
+        }
     }
 
     class CarFactory
     {
-        PartProvider parts = new PartProvider();
+        private PartProvider _parts = new PartProvider();
 
         public List<Part> CreateCar() //собираем тачку
         {
@@ -248,25 +292,25 @@
             int ammountOfSeats = 4;
             List<Part> car = new List<Part>();
 
-            for (int i = 0; i < parts.ProvideAllPartsType().Length; i++)
+            for (int i = 0; i < _parts.ProvideAllPartsType().Length; i++)
             {
-                if (parts.ProvideAllPartsType()[i].Name == "wheel")
+                if (_parts.ProvideAllPartsType()[i].Name == "wheel")
                 {
                     for (int j = 0; j < ammountOfWheels; j++)
                     {
-                        car.Add(new Part(parts.ProvideAllPartsType()[i])); //добавляем не из массива, чтобы были уникальными (используется другой конструктор).
+                        car.Add(new Part(_parts.ProvideAllPartsType()[i])); //добавляем не из массива, чтобы были уникальными (используется другой конструктор).
                     }
                 }
-                else if (parts.ProvideAllPartsType()[i].Name == "seat")
+                else if (_parts.ProvideAllPartsType()[i].Name == "seat")
                 {
                     for (int j = 0; j < ammountOfSeats; j++)
                     {
-                        car.Add(new Part(parts.ProvideAllPartsType()[i]));
+                        car.Add(new Part(_parts.ProvideAllPartsType()[i]));
                     }
                 }
                 else
                 {
-                    car.Add(parts.ProvideAllPartsType()[i]);
+                    car.Add(_parts.ProvideAllPartsType()[i]);
                 }
             }
 
