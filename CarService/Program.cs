@@ -1,18 +1,21 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 
 namespace CarService
 {
     class Programm
     {
-        static void Main()
+        static void Main() //Доделать - меню, очередь клиентов и её заполнение, цены деталей, цену работы.
         {
             //Menu menu = new Menu();
             //menu.Run();
-            //CarFactory factory = new CarFactory();
-            //Car car = new Car(factory.CreateCar());
+            CarFactory factory = new CarFactory();
+            Car car = new Car(factory.CreateCar());
             //car.ShowCar();
-            Storage _storage = new Storage();
-            _storage.ShowStorage();
+            Service service = new Service();
+            service.RepearCar(car);
+            //Storage _storage = new Storage();
+            //_storage.ShowStorage();
         }
     }
 
@@ -69,10 +72,82 @@ namespace CarService
 
     class Service //содержит склад и счёт сервиса и ремонтирует машину клиента.
     {
-        private int _serviceMoney;
+        private int _serviceMoney = 1000;
         private Storage _storage = new Storage();
 
+        public void RepearCar(Car car)
+        {
+            bool isExit = false;
+            string Exit = "0";
+            int idFromUser;
 
+            while (isExit == false)
+            {
+                car.ShowCar();
+                
+                Console.WriteLine("\nВведите номер детали для замены:");
+                Console.WriteLine(Exit + " - Выход\n");
+                
+                string userInput = Console.ReadLine();
+
+                if (userInput == Exit)
+                {
+                    isExit = true;
+                }
+                else if (int.TryParse(userInput, out idFromUser) == false)
+                {
+                    Console.Write("Неверный Id детали\n");
+                }
+                else
+                {
+                    Car tempCar = new Car(ReplaceCarPart(car, idFromUser));
+                    car = tempCar;
+                }
+            }
+        }
+
+        private List<Part> ReplaceCarPart(Car car, int id) //замена детали
+        {
+            string partName;
+            List<Part> tempCarParts = car.ProvideCarParts(); // получаем детали из тачки клиента
+
+            for (int i = 0; i < tempCarParts.Count; i++)
+            {
+                if (tempCarParts[i].Id == id) // ищем деталь в списке по id
+                {
+                    partName = tempCarParts[i].Name; // получаем название детали
+                    
+                    if (_storage.CheckPartAveilable(partName)) // проверяем наличие детали
+                    {
+                        tempCarParts.RemoveAt(i); // удаляем неисправную деталь
+                        tempCarParts.Insert(i, _storage.TransferPartFromStorage(partName)); //вставляем на её место исправную со склада
+                    }
+                }
+            }
+
+            return tempCarParts;
+        }
+
+
+        public void TakeMoney(int money)
+        {
+            _serviceMoney += money;
+        }
+
+        public int GiveMoney(int money)
+        {
+            if (_serviceMoney - money < 0)
+            {
+                Console.WriteLine("Не хватает денег. Сектор банкрот на барабане! Кое-что уходит в зрительный зал.");
+                return 0;
+            }
+            else
+            {
+                _serviceMoney -= money;
+
+                return money;
+            }
+        }
     }
 
     class Storage // содержит контейнеры с деталями
@@ -86,7 +161,7 @@ namespace CarService
             FillStorage();
         }
 
-        public void AddPartsToExistingContainers(List<Container> containers) //Добавляет детали в контейнеры
+        public void AddPartsToExistingContainers(List<Container> containers) //Добавляет детали в контейнеры (возможно переделать)
         {
             for (int i = 0; i < containers.Count; i++)
             {
@@ -98,6 +173,21 @@ namespace CarService
                     }
                 }
             }
+        }
+
+        public bool CheckPartAveilable(string name)
+        {
+            for (int i = 0; i < _storage.Count; i++)
+            {
+                if (_storage[i].Name == name)
+                {
+                    return true;
+                }
+            }
+
+            Console.WriteLine($"На складе кончились датали - {name}");
+            
+            return false;
         }
 
         public Part TransferPartFromStorage(string name) // Если получен null из этого метода, значит кончились детали, сервис платит штраф.
@@ -212,6 +302,7 @@ namespace CarService
             if (Money - money < 0)
             {
                 Console.WriteLine("Не хватает денег!");
+                return 0;
             }
 
             Money =- money;
@@ -385,6 +476,13 @@ namespace CarService
             Console.WriteLine($"Колёс - {wheelCount}"); // временно
             Console.WriteLine($"Сидений - {seatCount}");// временно
             Console.WriteLine($"Всего деталей в авто - {_car.Count}");// временно
+        }
+
+        public List<Part> ProvideCarParts()
+        {
+            List<Part> carParts = _car;
+
+            return carParts;
         }
     }
 
