@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.IO;
-
-namespace CarService
+﻿namespace CarService
 {
     class Programm
     {
@@ -72,8 +69,26 @@ namespace CarService
 
     class Service //содержит склад и счёт сервиса и ремонтирует машину клиента.
     {
-        private int _serviceMoney = 1000;
+        private int _account = 1000;
         private Storage _storage = new Storage();
+        private Queue<Client> _clients = new Queue<Client>();
+
+        public void CreateClients() //создаём клиентов и их тачки, ставим в очередь.
+        {
+            int clientsCount = 10;
+            int clientsEntered = 0;
+            CarFactory factory = new CarFactory();
+
+            for (int i = 0; i < clientsCount; i++)
+            {
+                Client client = new Client(new Car(factory.CreateCar()));
+                _clients.Enqueue(client);
+                clientsEntered++;
+            }
+
+            Console.WriteLine($"В очередь встало {clientsEntered} клиентов");
+            Console.WriteLine($"Всего клиентов в очереди - {_clients.Count()}");
+        }
 
         public void RepearCar(Car car)
         {
@@ -115,12 +130,19 @@ namespace CarService
             {
                 if (tempCarParts[i].Id == id) // ищем деталь в списке по id
                 {
-                    partName = tempCarParts[i].Name; // получаем название детали
-                    
-                    if (_storage.CheckPartAveilable(partName)) // проверяем наличие детали
+                    if (tempCarParts[i].IsBroken == true)
                     {
-                        tempCarParts.RemoveAt(i); // удаляем неисправную деталь
-                        tempCarParts.Insert(i, _storage.TransferPartFromStorage(partName)); //вставляем на её место исправную со склада
+                        partName = tempCarParts[i].Name; // получаем название детали
+
+                        if (_storage.CheckPartAveilable(partName)) // проверяем наличие детали
+                        {
+                            tempCarParts.RemoveAt(i); // удаляем неисправную деталь
+                            tempCarParts.Insert(i, _storage.TransferPartFromStorage(partName)); //вставляем на её место исправную со склада
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Вы пытаетесь заенить исправную деталь.");
                     }
                 }
             }
@@ -128,22 +150,21 @@ namespace CarService
             return tempCarParts;
         }
 
-
         public void TakeMoney(int money)
         {
-            _serviceMoney += money;
+            _account += money;
         }
 
         public int GiveMoney(int money)
         {
-            if (_serviceMoney - money < 0)
+            if (_account - money < 0)
             {
                 Console.WriteLine("Не хватает денег. Сектор банкрот на барабане! Кое-что уходит в зрительный зал.");
                 return 0;
             }
             else
             {
-                _serviceMoney -= money;
+                _account -= money;
 
                 return money;
             }
