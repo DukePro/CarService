@@ -67,7 +67,7 @@
         }
     }
 
-    class Service //содержит склад и счёт сервиса и ремонтирует машину клиента.
+    class Service //содержит склад и счёт сервиса и ремонтирует машину клиента
     {
         private int _account = 1000;
         private Storage _storage = new Storage();
