@@ -10,7 +10,9 @@
             Car car = new Car(factory.CreateCar());
             //car.ShowCar();
             Service service = new Service();
-            service.RepearCar(car);
+            service.CalculateRepearPrice(car);
+            //service.CreateClients(1);
+            //service.RepearCar(car);
             //Storage _storage = new Storage();
             //_storage.ShowStorage();
         }
@@ -72,10 +74,32 @@
         private int _account = 1000;
         private Storage _storage = new Storage();
         private Queue<Client> _clients = new Queue<Client>();
+        private PartRecord[] _partPrices = new PartRecord[]
+    {
+    new PartRecord("wheel", 80),
+    new PartRecord ("right headlight", 50),
+    new PartRecord ("left headlight", 50), 
+    new PartRecord ("transmission", 120),
+    new PartRecord ("drive shaft", 110),
+    new PartRecord ("windshield", 70),
+    new PartRecord ("rear window", 70),
+    new PartRecord ("left window", 50),
+    new PartRecord ("right window", 50),
+    new PartRecord ("hood", 90),
+    new PartRecord ("trunk", 90),
+    new PartRecord ("left door", 100),
+    new PartRecord ("right door", 100),
+    new PartRecord ("steering wheel", 30),
+    new PartRecord ("engine", 300),
+    new PartRecord ("radiator", 100),
+    new PartRecord ("front bumper", 80),
+    new PartRecord ("rear bumper", 80),
+    new PartRecord ("seat", 70),
+    new PartRecord ("speedometer", 30)
+    };
 
-        public void CreateClients() //создаём клиентов и их тачки, ставим в очередь.
+        public void CreateClients(int clientsCount) //создаём клиентов и их тачки, ставим в очередь.
         {
-            int clientsCount = 10;
             int clientsEntered = 0;
             CarFactory factory = new CarFactory();
 
@@ -88,6 +112,76 @@
 
             Console.WriteLine($"В очередь встало {clientsEntered} клиентов");
             Console.WriteLine($"Всего клиентов в очереди - {_clients.Count()}");
+        }
+
+        public void ServeClient() // обслуживание клиента (Переделать)
+        {
+            if (_clients.Count > 0)
+            {
+                bool isPayed = false;
+                Client client = _clients.Peek();
+
+                while (isPayed == false)
+                {
+                    int totalPrice = CalculateRepearPrice(client.ClientCar);
+
+                    if (client.Money >= totalPrice)
+                    {
+                        _account += client.Pay(totalPrice);
+                        _clients.Dequeue();
+
+                        if (totalPrice > 0)
+                        {
+                            Console.WriteLine($"Товары на сумму {totalPrice} оплачены, клиент обслужен.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Клиент ничего не купил");
+                        }
+
+                        Console.WriteLine($"Балланс магазина - {_account}");
+                        Console.WriteLine($"Клиентов в очереди - {_clients.Count()}");
+                        isPayed = true;
+                    }
+                    else
+                    {
+                        //client.RemoveFromCart();
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("Очередь клиентов пуста");
+            }
+        }
+
+        public int CalculateRepearPrice(Car car)
+        {
+            int totalPrice = 0;
+            int partsPrice = 0;
+            int jobPrice = 0;
+            string partName;
+
+            List<Part> tempCarParts = car.ProvideCarParts(); // получаем детали из тачки клиента
+
+            for (int i = 0; i < tempCarParts.Count; i++)
+            {
+                for (int j = 0; j < _partPrices.Length; j++)
+                {
+                    if (tempCarParts[i].IsBroken == true && tempCarParts[i].Name == _partPrices[j].Name)
+                    {
+                        partsPrice += _partPrices[j].Price;
+                        jobPrice += _partPrices[j].JobPrice;
+                        totalPrice += _partPrices[j].Price + _partPrices[j].JobPrice;
+
+                        Console.WriteLine($"{_partPrices[j].Name} - цена детали - {_partPrices[j].Price} - стоимость ремонта - {_partPrices[j].JobPrice}");
+                    }
+                }
+            }
+
+                Console.WriteLine($"Стоимость деталей - {partsPrice}, стоимость ремонта - {jobPrice}, ИТОГО: {totalPrice}");
+
+                return totalPrice;
         }
 
         public void RepearCar(Car car)
@@ -318,7 +412,7 @@
             ClientCar = car;
         }
 
-        public int GiveMoney(int money)
+        public int Pay(int money)
         {
             if (Money - money < 0)
             {
@@ -548,6 +642,20 @@
         {
             IsBroken = true;
         }
+    }
+
+    class PartRecord : Part
+    {
+        private int _jobPriceModificator = 5; // Число на которое делим стоимость детали, чтобы получить стоимость работы.
+
+        public PartRecord(string name, int price) : base(name)
+        {
+            Price = price;
+            JobPrice = price/ _jobPriceModificator;
+        }
+
+        public int Price { get; private set; }
+        public int JobPrice { get; private set; }
     }
 
     class Utils
