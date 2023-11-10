@@ -2,13 +2,13 @@
 {
     class Programm
     {
-        static void Main() //Доделать - меню, очередь клиентов и её заполнение, цены деталей, цену работы.
+        static void Main() //Доделать - меню, цены деталей, цену работы.
         {
             //Menu menu = new Menu();
             //menu.Run();
             CarFactory factory = new CarFactory();
             Car car = new Car(factory.CreateCar());
-            //car.ShowCar();
+            car.ShowCar();
             Service service = new Service();
             service.CalculateRepearPrice(car);
             //service.CreateClients(1);
@@ -20,10 +20,9 @@
 
     class Menu
     {
-        private const string FishAdd = "1";
-        private const string FishRemove = "2";
-        private const string RemoveAllFishes = "3";
-        private const string SkipTime = "4";
+        private const string ServeClient = "1";
+        private const string CreateClients = "2";
+        private const string CheckStorage = "3";
         private const string Exit = "0";
 
         public void Run()
@@ -31,33 +30,30 @@
             string userInput;
             bool isExit = false;
             int menuPositionY = 0;
+            Service service = new Service();
 
             while (isExit == false)
             {
                 Console.SetCursorPosition(0, menuPositionY);
-                Console.WriteLine(FishAdd + "ghghghgh");
-                Console.WriteLine(FishRemove + " - Remove fish");
-                Console.WriteLine(RemoveAllFishes + " - Clear Aquarium");
-                Console.WriteLine(SkipTime + " - Skip 1 month");
-                Console.WriteLine(Exit + " - Exit\n");
+                service.ShowServiceStatus();
+                Console.WriteLine(ServeClient + " - Обслужить клиента");
+                Console.WriteLine(CreateClients + " - Создать клиентов");
+                Console.WriteLine(CheckStorage + " - Склад");
+                Console.WriteLine(Exit + " - Выход\n");
 
                 userInput = Console.ReadLine();
 
                 switch (userInput)
                 {
-                    case FishAdd:
+                    case ServeClient:
                         UiOperations.CleanString();
                         break;
 
-                    case FishRemove:
+                    case CreateClients:
                         UiOperations.CleanString();
                         break;
 
-                    case RemoveAllFishes:
-                        UiOperations.CleanString();
-                        break;
-
-                    case SkipTime:
+                    case CheckStorage:
                         UiOperations.CleanString();
                         break;
 
@@ -66,6 +62,16 @@
                         break;
                 }
             }
+        }
+
+        private void ServeClientMenu()
+        {
+
+        }
+
+        private void StorageMenu()
+        {
+
         }
     }
 
@@ -98,6 +104,11 @@
     new PartRecord ("speedometer", 30)
     };
 
+        public void ShowServiceStatus()
+        {
+            Console.WriteLine($"Счёт - {_account}, Клиентов в очереди - {_clients.Count}");
+        }
+
         public void CreateClients(int clientsCount) //создаём клиентов и их тачки, ставим в очередь.
         {
             int clientsEntered = 0;
@@ -128,7 +139,6 @@
                     if (client.Money >= totalPrice)
                     {
                         _account += client.Pay(totalPrice);
-                        _clients.Dequeue();
 
                         if (totalPrice > 0)
                         {
@@ -141,6 +151,8 @@
 
                         Console.WriteLine($"Балланс магазина - {_account}");
                         Console.WriteLine($"Клиентов в очереди - {_clients.Count()}");
+                        
+                        _clients.Dequeue();
                         isPayed = true;
                     }
                     else
