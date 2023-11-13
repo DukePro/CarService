@@ -2,15 +2,15 @@
 {
     class Programm
     {
-        static void Main() //Доделать - меню, цены деталей, цену работы.
+        static void Main() //Доделать - меню.
         {
-            //Menu menu = new Menu();
-            //menu.Run();
-            CarFactory factory = new CarFactory();
-            Car car = new Car(factory.CreateCar());
-            car.ShowCar();
-            Service service = new Service();
-            service.CalculateRepearPrice(car);
+            Menu menu = new Menu();
+            menu.Run();
+            //CarFactory factory = new CarFactory();
+            //Car car = new Car(factory.CreateCar());
+            //car.ShowCar();
+            //Service service = new Service();
+            //service.CalculateRepearPrice(car);
             //service.CreateClients(1);
             //service.RepearCar(car);
             //Storage _storage = new Storage();
@@ -24,18 +24,22 @@
         private const string CreateClients = "2";
         private const string CheckStorage = "3";
         private const string Exit = "0";
+        private Service _service = new Service();
+        private Storage _storage = new Storage();
 
         public void Run()
         {
             string userInput;
             bool isExit = false;
             int menuPositionY = 0;
-            Service service = new Service();
 
             while (isExit == false)
             {
                 Console.SetCursorPosition(0, menuPositionY);
-                service.ShowServiceStatus();
+                UiOperations.CleanConsoleBelowLine();
+                Console.SetCursorPosition(0, menuPositionY);
+
+                _service.ShowServiceStatus();
                 Console.WriteLine(ServeClient + " - Обслужить клиента");
                 Console.WriteLine(CreateClients + " - Создать клиентов");
                 Console.WriteLine(CheckStorage + " - Склад");
@@ -55,6 +59,7 @@
 
                     case CheckStorage:
                         UiOperations.CleanString();
+                        StorageMenu();
                         break;
 
                     case Exit:
@@ -71,7 +76,36 @@
 
         private void StorageMenu()
         {
+            bool isExit = false;
+            const string OrderMoreParts = "1"; //OrderMorePartsCommand или MenuOrderMoreParts
+            const string ShowStorage = "2";
+            const string ExitStorageMenu = "0";
+            string userInput;
 
+            while (isExit == false)
+            {
+                Console.WriteLine("\nМеню склада:");
+                Console.WriteLine(OrderMoreParts + " - Заказать запчастей:");
+                Console.WriteLine(ShowStorage + " - Показать склад:");
+                Console.WriteLine(ExitStorageMenu + " - Назад:");
+
+                userInput = Console.ReadLine();
+
+                switch (userInput)
+                {
+                    case OrderMoreParts:
+                        _storage.AddPartsToExistingContainers(_storage.FillStorage());
+                        break;
+
+                    case ShowStorage:
+                        _storage.ShowStorage();
+                        break;
+
+                    case ExitStorageMenu:
+                        isExit = true;
+                        break;
+                }
+            }
         }
     }
 
@@ -142,14 +176,14 @@
 
                         if (totalPrice > 0)
                         {
-                            Console.WriteLine($"Товары на сумму {totalPrice} оплачены, клиент обслужен.");
+                            Console.WriteLine($"Ренонт на сумму {totalPrice} выполнен, клиент обслужен.");
                         }
                         else
                         {
-                            Console.WriteLine("Клиент ничего не купил");
+                            Console.WriteLine("У клеента не хватает денег на ремонт");
                         }
 
-                        Console.WriteLine($"Балланс магазина - {_account}");
+                        Console.WriteLine($"Балланс сервиса - {_account}");
                         Console.WriteLine($"Клиентов в очереди - {_clients.Count()}");
                         
                         _clients.Dequeue();
@@ -285,8 +319,13 @@
 
         public Storage()
         {
-            FillStorage();
+            _storage = FillStorage();
         }
+
+        //public void TestForAddParts()
+        //{
+        //    _storage[0].AddParts(_storage[1]);
+        //}
 
         public void AddPartsToExistingContainers(List<Container> containers) //Добавляет детали в контейнеры (возможно переделать)
         {
@@ -296,7 +335,7 @@
                 {
                     if (containers[i].Name == _storage[j].Name)
                     {
-                        _storage[i].AddParts(containers[j].TransferAllPartsFromContainer());
+                        _storage[j].AddParts(containers[i].TransferAllPartsFromContainer());
                     }
                 }
             }
@@ -323,7 +362,7 @@
             {
                 if (_storage[i].Name == name)
                 {
-                    return _storage[i].TransferPartFromContainer();
+                    return _storage[i].GetPart();
                 }
             }
 
@@ -341,8 +380,10 @@
             }
         }
 
-        private void FillStorage()
+        public List<Container> FillStorage()
         {
+            List<Container> storage = new List<Container>();
+
             for (int i = 0; i < _parts.ProvideAllPartsType().Length; i++) //проходим столько раз, какой длины список
             {
                 List<Part> parts = new List<Part>(); //создаём список деталей
@@ -353,8 +394,10 @@
                 }
 
                 Container container = new Container(parts); // создаём контейнер и помещаем в него детали
-                _storage.Add(container); // добавляем контейнер на склад
+                storage.Add(container); // добавляем контейнер на склад
             }
+
+            return storage;
         }
     }
 
@@ -367,19 +410,19 @@
         {
             Id = _id++;
             _parts = parts;
-            Ammount = _parts.Count;
             Name = _parts[0].Name;
         }
 
         public int Id { get; private set; }
         public string Name { get; private set; }
-        public int Ammount { get; private set; }
+        public int Ammount => _parts.Count;
 
-        public Part TransferPartFromContainer()
+        public Part GetPart() //передаёт деталь из контейнера
         {
             if (_parts.Count > 0)
             {
-                Part part = _parts[0];
+                Part part;
+                part = _parts[0];
                 _parts.RemoveAt(0);
 
                 return part;
@@ -392,13 +435,13 @@
 
         public List<Part> TransferAllPartsFromContainer()
         {
-            List<Part> parts = _parts;
+            List<Part> parts = new List<Part>(_parts);
             _parts.Clear();
 
             return parts;
         }
 
-        public void AddParts(List<Part> parts)
+        public void AddParts(List<Part> parts) //А ПОЧЕМУ???
         {
             _parts.AddRange(parts);
         }
