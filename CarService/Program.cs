@@ -2,19 +2,10 @@
 {
     class Programm
     {
-        static void Main() //Доделать - меню.
+        static void Main() // не тратятся детали со склада
         {
             Menu menu = new Menu();
             menu.Run();
-            //CarFactory factory = new CarFactory();
-            //Car car = new Car(factory.CreateCar());
-            //car.ShowCar();
-            //Service service = new Service();
-            //service.CalculateRepearPrice(car);
-            //service.CreateClients(1);
-            //service.RepearCar(car);
-            //Storage _storage = new Storage();
-            //_storage.ShowStorage();
         }
     }
 
@@ -54,7 +45,7 @@
                 {
                     case ServeClientCommand:
                         UiOperations.CleanString();
-                        ServeClientMenu();
+                        _service.ServeClientMenu();
                         break;
 
                     case CreateClientsCommand:
@@ -64,85 +55,10 @@
 
                     case CheckStorageCommand:
                         UiOperations.CleanString();
-                        StorageMenu();
+                        _storage.StorageMenu();
                         break;
 
                     case Exit:
-                        isExit = true;
-                        break;
-                }
-            }
-        }
-
-        private void ServeClientMenu()
-        {
-            bool isExit = false;
-            const string ShowCarCommand = "1";
-            const string CheckRepearPriceCommand = "2";
-            const string ChangePartCommand = "3";
-            const string ExitRepearCommand = "0";
-            string userInput;
-            Client client = _service.GetClient();
-
-            while (isExit == false)
-            {
-                Console.WriteLine("\nМеню ремонта:");
-                Console.WriteLine(ShowCarCommand + " - Осмотреть машину:");
-                Console.WriteLine(CheckRepearPriceCommand + " - Оценить стоимость ремонта:");
-                Console.WriteLine(ChangePartCommand + " - Заменить деталь:");
-                Console.WriteLine(ExitRepearCommand + " - Закончить обслуживание и отпустить клиента:");
-
-                userInput = Console.ReadLine();
-
-                switch (userInput)
-                {
-                    case ShowCarCommand:
-                        client.ClientCar.ShowCar();
-                        break;
-
-                    case CheckRepearPriceCommand:
-                        _service.CalculateRepearPrice(client.ClientCar, true);
-                        break;
-
-                    case ChangePartCommand:
-                        _service.ServeClient(client);
-                        break;
-
-                    case ExitRepearCommand:
-                        isExit = true;
-                        break;
-                }
-            }
-        }
-
-        private void StorageMenu()
-        {
-            bool isExit = false;
-            const string OrderMorePartsCommand = "1";
-            const string ShowStorageCommand = "2";
-            const string ExitStorageCommand = "0";
-            string userInput;
-
-            while (isExit == false)
-            {
-                Console.WriteLine("\nМеню склада:");
-                Console.WriteLine(OrderMorePartsCommand + " - Заказать запчастей:");
-                Console.WriteLine(ShowStorageCommand + " - Показать склад:");
-                Console.WriteLine(ExitStorageCommand + " - Назад:");
-
-                userInput = Console.ReadLine();
-
-                switch (userInput)
-                {
-                    case OrderMorePartsCommand:
-                        _storage.AddPartsToExistingContainers(_storage.FillStorage());
-                        break;
-
-                    case ShowStorageCommand:
-                        _storage.ShowStorage();
-                        break;
-
-                    case ExitStorageCommand:
                         isExit = true;
                         break;
                 }
@@ -179,6 +95,55 @@
     new PartRecord ("speedometer", 30)
     };
 
+        public void ServeClientMenu()
+        {
+            bool isExit = false;
+            const string ShowCarCommand = "1";
+            const string CheckRepearPriceCommand = "2";
+            const string ChangePartCommand = "3";
+            const string ExitRepearCommand = "0";
+            string userInput;
+
+            if (_clients.Count == 0)
+            {
+                Console.WriteLine("Очередь клиентов пуста.");
+
+                return;
+            }
+
+            Client client = GetClient();
+
+            while (isExit == false)
+            {
+                Console.WriteLine("\nМеню ремонта:");
+                Console.WriteLine(ShowCarCommand + " - Осмотреть машину:");
+                Console.WriteLine(CheckRepearPriceCommand + " - Оценить стоимость ремонта:");
+                Console.WriteLine(ChangePartCommand + " - Заменить деталь:");
+                Console.WriteLine(ExitRepearCommand + " - Закончить обслуживание и отпустить клиента:");
+
+                userInput = Console.ReadLine();
+
+                switch (userInput)
+                {
+                    case ShowCarCommand:
+                        client.ClientCar.ShowCar();
+                        break;
+
+                    case CheckRepearPriceCommand:
+                        CalculateRepearPrice(client.ClientCar, true);
+                        break;
+
+                    case ChangePartCommand:
+                        ServeClient(client);
+                        break;
+
+                    case ExitRepearCommand:
+                        isExit = true;
+                        break;
+                }
+            }
+        }
+
         public void ShowServiceStatus()
         {
             Console.WriteLine($"Счёт - {_account}, Клиентов в очереди - {_clients.Count}");
@@ -186,23 +151,27 @@
 
         public Client GetClient()
         {
-            return _clients.Dequeue();
+            if ( _clients.Count == 0 )
+            {
+                Console.WriteLine("Очередь клиентов пуста.");
+                
+                return new Client();
+            }
+            else
+            {
+                return _clients.Dequeue();
+            }
         }
 
         public void CreateClients(int clientsCount) //создаём клиентов и их тачки, ставим в очередь.
         {
-            int clientsEntered = 0;
             CarFactory factory = new CarFactory();
 
             for (int i = 0; i < clientsCount; i++)
             {
                 Client client = new Client(new Car(factory.CreateCar()));
                 _clients.Enqueue(client);
-                clientsEntered++;
             }
-            //этой части не видно из-за очистки страницы в меню
-            //Console.WriteLine($"В очередь встало {clientsEntered} клиентов");
-            //Console.WriteLine($"Всего клиентов в очереди - {_clients.Count()}");
         }
 
         public int CalculateRepearPrice(Car car, bool showInfo)
@@ -272,20 +241,25 @@
                     isPartFound = true;
                     partName = tempCarParts[i].Name; // получаем название детали
 
-                    if (_storage.CheckPartAveilable(partName)) // проверяем наличие детали
+                    if (_storage.CheckPartAveilable(partName) == true) // проверяем наличие детали
                     {
                         if (RecivePayment(partName, client, true))
                         {
                             if (tempCarParts[i].IsBroken == false)
                             {
-                                Console.WriteLine("Вы заменили исправную деталь!"); // СДЕЛАТЬ ШТРАФ ЗА ЭТО
+                                Console.WriteLine("Вы заменили исправную деталь!");
+                                client.ReciveMoney(PayFine());
                             }
 
                             tempCarParts.RemoveAt(i); // удаляем неисправную деталь
                             tempCarParts.Insert(i, _storage.TransferPartFromStorage(partName)); //вставляем на её место исправную со склада
-
-                            //i = tempCarParts.Count; //спорно
+                            i = tempCarParts.Count;
                         }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"На складе кончились датали - {partName}. Придётся заплатить штраф.");
+                        client.ReciveMoney(PayFine());
                     }
                 }
             }
@@ -300,16 +274,12 @@
         private bool RecivePayment(string partName, Client client, bool showInfo)
         {
             bool isPayed = false;
-            int partPrice = 0;
-            int jobPrice = 0;
             int totalPrice = 0;
 
             for (int i = 0; i < _partPrices.Length; i++)
             {
                 if (partName == _partPrices[i].Name)
                 {
-                    partPrice = _partPrices[i].Price;
-                    jobPrice = _partPrices[i].JobPrice;
                     totalPrice += _partPrices[i].Price + _partPrices[i].JobPrice;
 
                     if (showInfo == true)
@@ -333,6 +303,13 @@
             return isPayed;
         }
 
+        private int PayFine()
+        {
+            int fine = 1000;
+
+            return GiveMoney(fine);
+        }
+
         public void TakeMoney(int money)
         {
             _account += money;
@@ -342,7 +319,7 @@
         {
             if (_account - money < 0)
             {
-                Console.WriteLine("Не хватает денег. Сектор банкрот на барабане! Кое-что уходит в зрительный зал.");
+                Console.WriteLine("Не хватает денег. Сектор банкрот на барабане! Кое-что уходит в зрительный зал. (Конец игры)");
                 return 0;
             }
             else
@@ -356,13 +333,47 @@
 
     class Storage // содержит контейнеры с деталями
     {
-        private int _initialAmmountOfParts = 10;
+        private int _initialAmmountOfParts = 1;
         private PartProvider _parts = new PartProvider();
         private List<Container> _storage = new List<Container>();
 
         public Storage()
         {
             _storage = FillStorage();
+        }
+
+        public void StorageMenu()
+        {
+            bool isExit = false;
+            const string OrderMorePartsCommand = "1";
+            const string ShowStorageCommand = "2";
+            const string ExitStorageCommand = "0";
+            string userInput;
+
+            while (isExit == false)
+            {
+                Console.WriteLine("\nМеню склада:");
+                Console.WriteLine(OrderMorePartsCommand + " - Заказать запчастей:");
+                Console.WriteLine(ShowStorageCommand + " - Показать склад:");
+                Console.WriteLine(ExitStorageCommand + " - Назад:");
+
+                userInput = Console.ReadLine();
+
+                switch (userInput)
+                {
+                    case OrderMorePartsCommand:
+                        AddPartsToExistingContainers(FillStorage());
+                        break;
+
+                    case ShowStorageCommand:
+                        ShowStorage();
+                        break;
+
+                    case ExitStorageCommand:
+                        isExit = true;
+                        break;
+                }
+            }
         }
 
         public void AddPartsToExistingContainers(List<Container> containers) //Добавляет детали в контейнеры
@@ -394,7 +405,7 @@
             return false;
         }
 
-        public Part TransferPartFromStorage(string name) // Если получен null из этого метода, значит кончились детали, сервис платит штраф.
+        public Part TransferPartFromStorage(string name)
         {
             for (int i = 0; i < _storage.Count; i++)
             {
@@ -405,6 +416,7 @@
             }
 
             Console.WriteLine($"На складе кончились датали - {name}");
+
             return null;
         }
 
@@ -459,8 +471,7 @@
         {
             if (_parts.Count > 0)
             {
-                Part part;
-                part = _parts[0];
+                Part part = _parts[0];
                 _parts.RemoveAt(0);
 
                 return part;
@@ -494,6 +505,10 @@
             Id = _id++;
             Money = 2000;
             ClientCar = car;
+        }
+
+        public Client()
+        {
         }
 
         public int Id { get; private set; }
@@ -648,7 +663,6 @@
                 car = tempCar;
             }
 
-            //можно добавить сортировку по сломаным деталям и Id
             return car;
         }
     }
@@ -671,30 +685,6 @@
                 _car[i].ShowPartInfo();
             }
         }
-
-        //public void ShowCar()
-        //{
-        //    int wheelCount = 0;// временно
-        //    int seatCount = 0;// временно
-
-        //    for (int i = 0; i < _car.Count; i++)
-        //    {
-        //        _car[i].ShowPartInfo();
-
-        //        if (_car[i].Name == "wheel")// временно
-        //        {
-        //            wheelCount++;// временно
-        //        }
-        //        if (_car[i].Name == "seat")// временно
-        //        {
-        //            seatCount++;// временно
-        //        }
-        //    }
-
-        //    Console.WriteLine($"Колёс - {wheelCount}"); // временно
-        //    Console.WriteLine($"Сидений - {seatCount}");// временно
-        //    Console.WriteLine($"Всего деталей в авто - {_car.Count}");// временно
-        //}
 
         public List<Part> ProvideCarParts()
         {
@@ -781,8 +771,9 @@
         public static void CleanConsoleBelowLine()
         {
             int currentLineCursor = Console.CursorTop;
+            int numberOfCleanScreens = 10;
 
-            for (int i = currentLineCursor; i < Console.WindowHeight; i++)
+            for (int i = currentLineCursor; i < Console.WindowHeight * numberOfCleanScreens; i++)
             {
                 Console.SetCursorPosition(0, i);
                 Console.Write(new string(' ', Console.WindowWidth));
