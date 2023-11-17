@@ -15,6 +15,7 @@
         private const string CreateClientsCommand = "2";
         private const string CheckStorageCommand = "3";
         private const string Exit = "0";
+
         private int _clientsToCreate = 5;
         private Service _service = new Service();
 
@@ -43,17 +44,14 @@
                 switch (userInput)
                 {
                     case ServeClientCommand:
-                        UiOperations.CleanString();
                         _service.ServeClientMenu();
                         break;
 
                     case CreateClientsCommand:
-                        UiOperations.CleanString();
                         _service.CreateClients(_clientsToCreate);
                         break;
 
                     case CheckStorageCommand:
-                        UiOperations.CleanString();
                         _service.StorageMenu();
                         break;
 
@@ -70,7 +68,12 @@
         private int _account = 1000;
         private Storage _storage;
         private Queue<Client> _clients = new Queue<Client>();
-        private PartRecord[] _partPrices = new PartRecord[]
+        private PartRecord[] _partPrices;
+
+        public Service()
+        {
+            _storage = new Storage();
+            _partPrices = new PartRecord[]
     {
     new PartRecord("wheel", 80),
     new PartRecord ("right headlight", 50),
@@ -93,19 +96,16 @@
     new PartRecord ("seat", 70),
     new PartRecord ("speedometer", 30)
     };
-
-        public Service()
-        {
-            _storage = new Storage();
         }
 
         public void ServeClientMenu()
         {
-            bool isExit = false;
             const string ShowCarCommand = "1";
             const string CheckRepearPriceCommand = "2";
             const string ChangePartCommand = "3";
             const string ExitRepearCommand = "0";
+            
+            bool isExit = false;
             string userInput;
 
             if (_clients.Count == 0)
@@ -130,11 +130,11 @@
                 switch (userInput)
                 {
                     case ShowCarCommand:
-                        client.ClientCar.ShowCar();
+                        client.CustomerCar.ShowCar();
                         break;
 
                     case CheckRepearPriceCommand:
-                        CalculateRepearPrice(client.ClientCar, true);
+                        CalculateRepearPrice(client.CustomerCar, true);
                         break;
 
                     case ChangePartCommand:
@@ -150,10 +150,11 @@
 
         public void StorageMenu()
         {
-            bool isExit = false;
             const string OrderMorePartsCommand = "1";
             const string ShowStorageCommand = "2";
             const string ExitStorageCommand = "0";
+            
+            bool isExit = false;
             string userInput;
 
             while (isExit == false)
@@ -168,7 +169,7 @@
                 switch (userInput)
                 {
                     case OrderMorePartsCommand:
-                        _storage.AddPartsToExistingContainers(_storage.FillStorage());
+                        _storage.AddPartsToExistingContainers();
                         break;
 
                     case ShowStorageCommand:
@@ -217,7 +218,6 @@
             int totalPrice = 0;
             int partsPrice = 0;
             int jobPrice = 0;
-            string partName;
 
             List<Part> tempCarParts = car.ProvideCarParts();
 
@@ -261,16 +261,15 @@
             }
             else
             {
-                Car tempCar = new Car(ReplaceCarPart(client, idFromUser));
-                client.ReciveRepearedCar(tempCar);
+                ReplaceCarPart(client, idFromUser);
             }
         }
 
-        private List<Part> ReplaceCarPart(Client client, int id)
+        private void ReplaceCarPart(Client client, int id)
         {
             bool isPartFound = false;
             string partName;
-            List<Part> tempCarParts = client.ClientCar.ProvideCarParts();
+            List<Part> tempCarParts = client.CustomerCar.ProvideCarParts();
 
             for (int i = 0; i < tempCarParts.Count; i++)
             {
@@ -289,10 +288,18 @@
                                 client.ReciveMoney(PayFine());
                             }
 
-                            tempCarParts.RemoveAt(i);
                             Part newPart = _storage.TransferPart(partName);
-                            tempCarParts.Insert(i, newPart);
-                            i = tempCarParts.Count;
+                            
+                            if (client.CustomerCar.ReplacePart(newPart, id))
+                            {
+                                Console.WriteLine("Ремонт прошел успешно");
+                            }
+                            else
+                            {
+                                Console.WriteLine("Ремонт не удался");
+                            }
+
+                            break;
                         }
                     }
                     else
@@ -302,12 +309,11 @@
                     }
                 }
             }
+
             if (isPartFound == false)
             {
                 Console.WriteLine("Такой детали не существует, возможно Вы ошиблись в номере.");
             }
-
-            return tempCarParts;
         }
 
         private bool RecivePayment(string partName, Client client, bool showInfo)
@@ -327,6 +333,7 @@
                     }
                 }
             }
+
             if (client.Money >= totalPrice)
             {
                 _account += client.Pay(totalPrice);
@@ -378,18 +385,20 @@
 
         public Storage()
         {
-            _containers = FillStorage();
+            _containers = Fill();
         }
 
-        public void AddPartsToExistingContainers(List<Container> containers)
+        public void AddPartsToExistingContainers()
         {
+            List<Container> containers = Fill();
+
             for (int i = 0; i < containers.Count; i++)
             {
                 for (int j = 0; j < _containers.Count; j++)
                 {
                     if (containers[i].Name == _containers[j].Name)
                     {
-                        _containers[j].AddParts(containers[i].TransferAllPartsFromContainer());
+                        _containers[j].AddParts(containers[i].TransferAllParts());
                     }
                 }
             }
@@ -435,7 +444,7 @@
             }
         }
 
-        public List<Container> FillStorage()
+        public List<Container> Fill()
         {
             List<Container> storage = new List<Container>();
 
@@ -458,12 +467,12 @@
 
     class Container
     {
-        private static int _id = 0;
+        private static int s_id = 0;
         private List<Part> _parts;
 
         public Container(List<Part> parts)
         {
-            Id = _id++;
+            Id = s_id++;
             _parts = parts;
             Name = _parts[0].Name;
         }
@@ -487,7 +496,7 @@
             }
         }
 
-        public List<Part> TransferAllPartsFromContainer()
+        public List<Part> TransferAllParts()
         {
             List<Part> parts = new List<Part>(_parts);
             _parts.Clear();
@@ -503,13 +512,13 @@
 
     class Client
     {
-        private static int _id = 0;
+        private static int s_id = 0;
 
         public Client(Car car)
         {
-            Id = _id++;
+            Id = s_id++;
             Money = 2000;
-            ClientCar = car;
+            CustomerCar = car;
         }
 
         public Client()
@@ -518,11 +527,11 @@
 
         public int Id { get; private set; }
         public int Money { get; private set; }
-        public Car ClientCar { get; private set; }
+        public Car CustomerCar { get; private set; }
 
         public void ReciveRepearedCar(Car car)
         {
-            ClientCar = car;
+            CustomerCar = car;
         }
 
         public int Pay(int money)
@@ -548,7 +557,11 @@
 
     class PartProvider
     {
-        private Part[] _partTypes = new Part[]
+        private Part[] _partTypes;
+
+        public PartProvider()
+        {
+            _partTypes = new Part[]
     {
     new Part("wheel"),
     new Part("right headlight"),
@@ -571,6 +584,7 @@
     new Part("seat"),
     new Part("speedometer")
     };
+        }
 
         public Part[] ProvideAllPartsType()
         {
@@ -698,9 +712,28 @@
             }
         }
 
+        public bool ReplacePart(Part part, int id)
+        {
+            bool isPartChanged = false;
+
+            for (int i = 0; i < _car.Count; i++)
+            {
+                if (_car[i].Id == id)
+                {
+                    _car.RemoveAt(i);
+                    _car.Insert(i, part);
+                    isPartChanged = true;
+
+                    return isPartChanged;
+                 }
+            }
+
+            return isPartChanged;
+        }
+
         public List<Part> ProvideCarParts()
         {
-            List<Part> carParts = _car;
+            List<Part> carParts = _car.ToList();
 
             return carParts;
         }
@@ -708,18 +741,18 @@
 
     class Part
     {
-        private static int _id = 0;
+        private static int s_id = 0;
 
         public Part(string name)
         {
-            Id = _id++;
+            Id = s_id++;
             Name = name;
             IsBroken = false;
         }
 
         public Part(Part name)
         {
-            Id = _id++;
+            Id = s_id++;
             Name = name.Name;
         }
 
@@ -792,31 +825,6 @@
             }
 
             Console.SetCursorPosition(0, currentLineCursor);
-        }
-
-        public static void MoveCursourMessageLine()
-        {
-            int mesagePositionY = 5;
-            Console.SetCursorPosition(0, mesagePositionY);
-        }
-
-        public static void MoveCursourUserInputLine()
-        {
-            int userInputPositionY = 7;
-            Console.SetCursorPosition(0, userInputPositionY);
-        }
-
-        public static void MoveCursourFishesListLine()
-        {
-            int fishesListPositionY = 9;
-            Console.SetCursorPosition(0, fishesListPositionY);
-        }
-
-        public static void CleanString()
-        {
-            Console.SetCursorPosition(0, Console.CursorTop);
-            Console.Write(new string(' ', Console.WindowWidth));
-            Console.SetCursorPosition(0, Console.CursorTop);
         }
     }
 }
