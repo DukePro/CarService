@@ -762,16 +762,9 @@
 
         public void ShowPartInfo()
         {
-            string status;
-
-            if (IsBroken == true)
-            {
-                status = "сломано";
-            }
-            else
-            {
-                status = "исправно";
-            }
+            string broken = "сломано";
+            string working = "исправно";
+            string status = IsBroken == true ? broken : working;
 
             Console.WriteLine($"{Id} - {Name} - {status}");
         }
